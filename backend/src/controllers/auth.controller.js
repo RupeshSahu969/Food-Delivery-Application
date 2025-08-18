@@ -22,18 +22,14 @@ const genToken = (id, email, role, name) => {
   return jwt.sign({ id, email, role, name }, process.env.JWT_SECRET, { expiresIn });
 };
 
+// Register a new user
 exports.register = async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(parsed.error);
 
   const { name, email, password, role } = parsed.data;
 
-  console.log("Parsed Data: ", parsed.data);  // Logs the parsed data to verify role
-  console.log("Role from parsed data:", role);  // Specifically log the role
-
-  // Check if the role is provided and is valid
   const userRole = role && ["admin", "restaurant", "customer"].includes(role) ? role : "customer";
-  console.log("Assigned Role:", userRole);  // Logs the assigned role to ensure correct role is being assigned
 
   const exists = await User.findOne({ email });
   if (exists) return res.status(409).json({ message: 'Email already used' });
@@ -43,7 +39,7 @@ exports.register = async (req, res) => {
     name, 
     email, 
     password, 
-    role: userRole // Make sure the correct role is assigned here
+    role: userRole
   });
 
   const token = genToken(user._id, user.email, user.role, user.name);
@@ -56,7 +52,7 @@ exports.register = async (req, res) => {
         id: user._id, 
         name, 
         email, 
-        role: user.role // Ensure role is included in the response
+        role: user.role 
       }
     },
     'Registered',
@@ -64,24 +60,20 @@ exports.register = async (req, res) => {
   );
 };
 
-// Login
+// Login user
 exports.login = async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(parsed.error);
 
   const { email, password } = parsed.data;
   const user = await User.findOne({ email });
-  console.log(user);
-
   if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
   const ok = await user.comparePassword(password);
   if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
 
-  // Generate token with all necessary user information
   const token = genToken(user._id, user.email, user.role, user.name);
 
-  // Send the token and user information back in the response
   return send(
     res,
     { 

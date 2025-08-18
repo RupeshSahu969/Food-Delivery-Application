@@ -1,4 +1,4 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
 const User = require("../models/User");
 
 // Protect routes (JWT authentication)
@@ -36,7 +36,7 @@ const allowRoles = (...roles) => {
   };
 };
 
-// ✅ Specific middleware for Admin
+// Admin-only route
 const isAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ message: "Only admin can perform this action" });
@@ -44,4 +44,12 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { protect, allowRoles, isAdmin };
+// Restaurant manager (only can access their own restaurant)
+const isRestaurantManager = (req, res, next) => {
+  if (!req.user || req.user.role !== "restaurant") {
+    return res.status(403).json({ message: "Only restaurant managers can access this" });
+  }
+  next();
+};
+
+module.exports = { protect, allowRoles, isAdmin, isRestaurantManager };

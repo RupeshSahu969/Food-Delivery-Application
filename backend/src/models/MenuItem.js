@@ -7,33 +7,13 @@ const menuItemSchema = new mongoose.Schema(
       ref: "Restaurant",
       required: true,
     },
-    title: {
-      type: String,
-      required: [true, "Menu item title is required"],
-      trim: true,
-    },
-    image: {
-      type: String, // image URL
-    },
-    price: {
-      type: Number,
-      required: [true, "Price is required"],
-      min: 1,
-    },
-    isVeg: {
-      type: Boolean,
-      default: true,
-    },
-    tags: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    desc: {
-      type: String,
-      trim: true,
-    },
+    name: { type: String, required: true },
+    description: { type: String },
+    price: { type: Number, required: true },
+    image: { type: String },
+    category: { type: String, required: true },
+    isAvailable: { type: Boolean, default: true },
+    rating: { type: Number, default: 4.0 },
   },
   { timestamps: true }
 );

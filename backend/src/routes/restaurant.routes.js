@@ -1,22 +1,17 @@
-const { Router } = require("express");
-const { allowRoles, protect } = require("../middleware/auth");
-const { 
-  addMenuItem, 
-  createRestaurant, 
-  getRestaurant, 
-  listRestaurants 
-} = require("../controllers/restaurant.controller");
+const express = require("express");
+const router = express.Router();
+const upload = require("../middleware/upload");
+const restaurantCtrl = require("../controllers/restaurant.controller");
+const { protect } = require("../middleware/auth");
 
-const router = Router();
+// Customer
+router.get("/", restaurantCtrl.listRestaurants);
+router.get("/:id", restaurantCtrl.getRestaurant);
 
-// Public routes
-router.get("/", listRestaurants);
-router.get("/:id", getRestaurant);
+// Admin - create restaurant
+router.post("/", protect, upload.single("image"), restaurantCtrl.createRestaurant);
 
-// Only admin can create restaurants
-router.post("/", protect, allowRoles("admin"), createRestaurant);
-
-// Only restaurant managers can add menu items to their restaurant
-router.post("/:restaurantId/menu", protect, allowRoles("restaurant"), addMenuItem);
+// Manager - add menu
+router.post("/:restaurantId/menu", protect, upload.single("image"), restaurantCtrl.addMenuItem);
 
 module.exports = router;
