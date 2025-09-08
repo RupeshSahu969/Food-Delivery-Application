@@ -9,9 +9,8 @@ router.get("/", restaurantCtrl.listRestaurants);
 router.get("/:id", restaurantCtrl.getRestaurant);
 
 // Admin - create restaurant
-router.post("/", protect, upload.single("image"), restaurantCtrl.createRestaurant);
-
-// Manager - add menu
+router.post("/", protect, upload.single("coverImage"), restaurantCtrl.createRestaurant);
 router.post("/:restaurantId/menu", protect, upload.single("image"), restaurantCtrl.addMenuItem);
+
 
 module.exports = router;

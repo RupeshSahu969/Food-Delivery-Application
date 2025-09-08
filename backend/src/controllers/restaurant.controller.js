@@ -19,6 +19,7 @@ exports.getRestaurant = async (req, res) => {
   return send(res, { restaurant: r, items });
 };
 
+
 // Restaurant creates restaurant
 // Restaurant creates restaurant
 exports.createRestaurant = async (req, res) => {
