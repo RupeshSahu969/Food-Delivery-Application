@@ -1,88 +1,124 @@
 const Restaurant = require('../models/Restaurant');
 const MenuItem = require('../models/MenuItem');
 const { send } = require('../utils/sendResponse');
+const { getFileUrl } = require("../utils/getFileUrl");
 
-// ✅ List all restaurants
+// Get all restaurants with optional search
 exports.listRestaurants = async (req, res) => {
-  const q = req.query.q || '';
-  const data = await Restaurant.find(
-    q ? { name: { $regex: q, $options: 'i' } } : {}
-  ).sort({ createdAt: -1 });
-  return send(res, data);
-};
-
-// ✅ Get single restaurant + menu
-exports.getRestaurant = async (req, res) => {
-  const r = await Restaurant.findById(req.params.id).populate("owner", "name email");
-  if (!r) return res.status(404).json({ message: 'Restaurant not found' });
-  const items = await MenuItem.find({ restaurant: r._id });
-  return send(res, { restaurant: r, items });
-};
-
-
-// Restaurant creates restaurant
-// Restaurant creates restaurant
-exports.createRestaurant = async (req, res) => {
   try {
-    if (req.user.role !== "restaurant") {
-      return res.status(403).json({ message: "Only restaurant managers can create restaurants" });
+    const { q, cuisine } = req.query;
+    let filter = {};
+    
+    if (q) {
+      filter.name = { $regex: q, $options: 'i' };
     }
-
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
-    // ✅ Ensure coordinates are parsed correctly
-    let coords = null;
-    if (req.body.coordinates) {
-      if (Array.isArray(req.body.coordinates)) {
-        coords = req.body.coordinates.map(Number);
-      } else if (req.body["coordinates[0]"] && req.body["coordinates[1]"]) {
-        coords = [
-          Number(req.body["coordinates[0]"]),
-          Number(req.body["coordinates[1]"]),
-        ];
-      }
+    
+    if (cuisine) {
+      filter.cuisineType = { $regex: cuisine, $options: 'i' };
     }
+    
+    const restaurants = await Restaurant.find(filter)
+      .populate('owner', 'name email')
+      .sort({ createdAt: -1 });
+    
+    return send(res, restaurants);
+  } catch (error) {
+    return send(res, null, error.message, 500);
+  }
+};
 
-    const restaurant = await Restaurant.create({
-      name: req.body.name,
-      description: req.body.description,
-      address: req.body.address,
-      cuisines: req.body.cuisines,
-      owner: req.user._id, // ✅ take from JWT
-      coverImage: imageUrl,
-      location: coords ? { type: "Point", coordinates: coords } : undefined, // ✅ only if coords exist
+// Get single restaurant with menu
+exports.getRestaurant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const restaurant = await Restaurant.findById(id).populate('owner', 'name email');
+    if (!restaurant) {
+      return send(res, null, "Restaurant not found", 404);
+    }
+    
+    const menuItems = await MenuItem.find({ restaurant: id, isAvailable: true });
+    
+    return send(res, { restaurant, menu: menuItems });
+  } catch (error) {
+    return send(res, null, error.message, 500);
+  }
+};
+
+// Create a new restaurant
+exports.createRestaurant = async (req, res, next) => {
+  try {
+    const { name, address, cuisineType, openingHours, deliveryTime } = req.body;
+
+    const imageUrl = req.file ? getFileUrl(req, req.file.filename) : null;
+
+    const restaurant = new Restaurant({
+      name,
+      address,
+      cuisineType,
+      openingHours,
+      deliveryTime,
+      image: imageUrl,
+      owner: req.user._id,
     });
 
-    return res.status(201).json({
-      success: true,
-      message: "Restaurant created successfully",
-      data: restaurant,
+    await restaurant.save();
+    res.status(201).json(restaurant);
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.addMenuItem = async (req, res, next) => {
+  try {
+    const { restaurantId } = req.params;
+    const { name, description, price } = req.body;
+
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+
+    // ✅ build image URL
+    const imageUrl = req.file ? getFileUrl(req, req.file.filename) : null;
+
+    const menuItem = new MenuItem({
+      name,
+      description,
+      price,
+      image: imageUrl,
+      restaurant: restaurantId,
     });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
+
+    await menuItem.save();
+
+    res.status(201).json({
+      message: "Menu item created successfully",
+      menuItem,
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
 
 
-
-// Manager adds menu item
-exports.addMenuItem = async (req, res) => {
-  const { restaurantId } = req.params;
-  const restaurant = await Restaurant.findById(restaurantId);
-
-  if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
-  if (restaurant.owner.toString() !== req.user._id.toString())
-    return res.status(403).json({ message: "Not allowed to add menu here" });
-
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
-  const item = await MenuItem.create({
-    ...req.body,
-    restaurant: restaurantId,
-    image: imageUrl
-  });
-
-  return send(res, item, "Menu Item Added", 201);
+// Get restaurant menu
+exports.getRestaurantMenu = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const { category } = req.query;
+    
+    let filter = { restaurant: restaurantId, isAvailable: true };
+    
+    if (category && category !== 'all') {
+      filter.category = { $regex: category, $options: 'i' };
+    }
+    
+    const menuItems = await MenuItem.find(filter).sort({ category: 1, name: 1 });
+    
+    return send(res, menuItems);
+  } catch (error) {
+    return send(res, null, error.message, 500);
+  }
 };
-

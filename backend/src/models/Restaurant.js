@@ -7,31 +7,51 @@ const restaurantSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    name: { type: String, required: true, trim: true },
-    description: { type: String, trim: true },
-    coverImage: { type: String },
-    images: [{ type: String }],
-    address: { type: String, required: true },
-    location: {
-      type: {
-        type: String,
-        enum: ["Point"],
-        default: "Point",
-      },
-      coordinates: { type: [Number] }, 
+    name: { 
+      type: String, 
+      required: true 
     },
-    cuisines: [{ type: String }],
-    deliveryFee: { type: Number, default: 20 },
-    rating: { type: Number, default: 4.2 },
+    description: { 
+      type: String 
+    },
+    cuisineType: {
+      type: String,
+      required: true
+    },
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      zipCode: String
+    },
+    contact: {
+      phone: String,
+      email: String
+    },
     openingHours: {
-      open: { type: String, default: "09:00 AM" },
-      close: { type: String, default: "11:00 PM" },
+      type: String,
+      default: "9:00 AM - 10:00 PM"
     },
-    isOpen: { type: Boolean, default: true },
+    image: { 
+      type: String 
+    },
+    rating: { 
+      type: Number, 
+      default: 4.0 
+    },
+    deliveryTime: {
+      type: String,
+      default: "30-40 min"
+    },
+    isActive: { 
+      type: Boolean, 
+      default: true 
+    }
   },
   { timestamps: true }
 );
 
-restaurantSchema.index({ location: "2dsphere" });
+// Create geospatial index for location-based queries
+restaurantSchema.index({ "address.location": "2dsphere" });
 
 module.exports = mongoose.model("Restaurant", restaurantSchema);

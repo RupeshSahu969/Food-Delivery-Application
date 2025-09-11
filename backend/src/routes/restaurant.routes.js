@@ -4,13 +4,13 @@ const upload = require("../middleware/upload");
 const restaurantCtrl = require("../controllers/restaurant.controller");
 const { protect } = require("../middleware/auth");
 
-// Customer
+// Public routes
 router.get("/", restaurantCtrl.listRestaurants);
 router.get("/:id", restaurantCtrl.getRestaurant);
+router.get("/:restaurantId/menu", restaurantCtrl.getRestaurantMenu);
 
-// Admin - create restaurant
-router.post("/", protect, upload.single("coverImage"), restaurantCtrl.createRestaurant);
+// Protected routes (restaurant owners)
+router.post("/", protect, upload.single("image"), restaurantCtrl.createRestaurant);
 router.post("/:restaurantId/menu", protect, upload.single("image"), restaurantCtrl.addMenuItem);
-
 
 module.exports = router;
